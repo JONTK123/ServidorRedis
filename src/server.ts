@@ -1,78 +1,93 @@
-import express from "express";
-import { Request, Response, Router } from "express";
-import {ProductsRepository} from "./ProductsRepository";
-import {Product } from "./product";
+import express from "express"; // Importa a biblioteca Express
+import { Request, Response, Router } from "express"; // Importa tipos Request, Response e Router do Express
+import { ProductsRepository } from "./ProductsRepository"; // Importa a classe ProductsRepository
+import { Product } from "./product"; // Importa a interface Product
 
+// Cria uma instância do aplicativo Express
 const app = express();
-const port = 3000;
-const routes = Router();
+const port = 3000; // Define a porta do servidor
+const routes = Router(); // Cria um objeto Router para gerenciar as rotas
 
-app.use(express.json());
+app.use(express.json()); // Middleware para analisar JSON no corpo das requisições
 
+// Cria uma instância de ProductsRepository
 const productsRepo = new ProductsRepository();
 
-try{
+// Carrega os dados do banco de dados para o Redis no início do servidor
+try {
     productsRepo.loadCache();
-    console.log('Dados carregados com sucesso parao redis!');
-}catch(err){
+    console.log('Dados carregados com sucesso para o redis!');
+} catch (err) {
     console.log('Erro ao carregar dados para o redis', err);
 }
 
-routes.get('/', (req: Request, res: Response)=>{
-    res.statusCode = 200;
-    res.send("Funcionando...");
+// Rota raiz que retorna uma mensagem simples
+routes.get('/', (req: Request, res: Response) => {
+    res.statusCode = 200; // Define o código de status HTTP como 200 (OK)
+    res.send("Funcionando..."); // Envia uma resposta simples
 });
 
-routes.post('/addProduct', async(req: Request, res: Response)=>{
-    // adicionar um produto.
-    const { name, price, description } = req.body;
-    const newProduct: Product = { name, price, description } as Product;
+// Rota para adicionar um novo produto
+routes.post('/addProduct', async (req: Request, res: Response) => {
+    const { name, price, description } = req.body; // Extrai os dados do produto do corpo da requisição
+    const newProduct: Product = { name, price, description } as Product; // Cria um novo objeto Product
 
-    const product = await productsRepo.create(newProduct);
-    res.statusCode = 200;
-    res.type('application/json');
-    res.send(product);
+    const product = await productsRepo.create(newProduct); // Chama o método create do repositório
+    res.statusCode = 200; // Define o código de status HTTP como 200 (OK)
+    res.type('application/json'); // Define o tipo da resposta como JSON
+    res.send(product); // Envia o produto recém-criado como resposta
 });
 
-routes.delete('/deleteProduct/:id', async(req: Request, res: Response)=>{
-    // deletar um produto.
-    const id = parseInt(req.params.id);
-    const product = await productsRepo.delete(id);
-    res.type('application/json');
-    res.sendStatus(200);
+// Rota para deletar um produto pelo ID
+routes.delete('/deleteProduct/:id', async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id); // Extrai o ID da URL e o converte para um número
+    await productsRepo.delete(id); // Chama o método delete do repositório
+    res.type('application/json'); // Define o tipo da resposta como JSON
+    res.sendStatus(200); // Envia uma resposta com código de status 200 (OK)
 });
 
-routes.put('/updateProduct', async(req: Request, res: Response)=>{
-    // atualizar um produto.
-    const { id, name, price, description } = req.body;
-    const newProduct: Product= { id, name, price, description } as Product;
-    
-    const product = await productsRepo.update(newProduct);
-    res.statusCode = 200;
-    res.type('application/json');
-    res.send(product);
+// Rota para atualizar um produto
+routes.put('/updateProduct', async (req: Request, res: Response) => {
+    const { id, name, price, description } = req.body; // Extrai os dados do produto do corpo da requisição
+    const newProduct: Product = { id, name, price, description } as Product; // Cria um novo objeto Product
+
+    const product = await productsRepo.update(newProduct); // Chama o método update do repositório
+    res.statusCode = 200; // Define o código de status HTTP como 200 (OK)
+    res.type('application/json'); // Define o tipo da resposta como JSON
+    res.send(product); // Envia o produto atualizado como resposta
 });
 
-routes.get('/getAllProducts', async(req: Request, res: Response)=>{
-    // obter todos os produtos.
-    const products = await productsRepo.getAll();
-    res.statusCode = 200; 
-    res.type('application/json')
-    res.send(products);
+// Rota para obter todos os produtos
+routes.get('/getAllProducts', async (req: Request, res: Response) => {
+    const products = await productsRepo.getAll(); // Chama o método getAll do repositório
+    res.statusCode = 200; // Define o código de status HTTP como 200 (OK)
+    res.type('application/json'); // Define o tipo da resposta como JSON
+    res.send(products); // Envia a lista de produtos como resposta
 });
 
-routes.get('/getProductID/:id', async(req: Request, res: Response)=>{
-    //get por id.
-    const id = parseInt(req.params.id);
-    const product = await productsRepo.getById(id);
-    res.statusCode = 200;
-    res.type('application/json'); //já interpretar o tipo da resposta como um json.
-    res.send(product);
+// Rota para obter um produto pelo ID
+routes.get('/getProductID/:id', async (req: Request, res: Response) => {
+    const id = parseInt(req.params.id); // Extrai o ID da URL e o converte para um número
+    const product = await productsRepo.getById(id); // Chama o método getById do repositório
+    res.statusCode = 200; // Define o código de status HTTP como 200 (OK)
+    res.type('application/json'); // Define o tipo da resposta como JSON
+    res.send(product); // Envia o produto encontrado como resposta
 });
 
-// aplicar as rotas na aplicação web backend. 
+// Rota para desligar o servidor
+routes.post('/shutdown', (req: Request, res: Response) => {
+    res.status(200).send('Servidor desligando...'); // Envia uma mensagem indicando que o servidor está desligando
+
+    // Fecha as conexões com o banco de dados e Redis
+    productsRepo.close(() => {
+        console.log('Conexões com o banco de dados e Redis encerradas.');
+    });
+});
+
+// Aplica as rotas definidas no aplicativo Express
 app.use(routes);
 
-app.listen(port, ()=>{
-    console.log(`Server is running on port ${port}`);
+// Inicia o servidor e escuta na porta especificada
+app.listen(port, () => {
+    console.log(`Server is running on port ${port}`); // Loga a mensagem indicando que o servidor está rodando
 });
