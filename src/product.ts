@@ -1,8 +1,9 @@
 import { RowDataPacket } from "mysql2"
 
-export interface Product extends RowDataPacket{
-    id: number
-    name: string
-    price: number
-    description: string
+// Interface que representa um produto.
+export interface Product extends RowDataPacket {
+    id: number;          // ID do produto.
+    name: string;        // Nome.
+    price: number;       // Preço.
+    description: string; // Descrição.
 }
